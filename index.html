@@ -5556,6 +5556,27 @@ button.submit{padding:14px;}
       btn.disabled = false;
       btn.textContent = "نشر الإعلان";
 
+      // مراجعة ذكية بالخلفية عبر دالة listing-ai (فحص نصي + فحص بصري للصورة الأولى إن وُجدت) — لا تُعطّل نشر الإعلان
+      if (insertedListing && insertedListing.id) {
+        supabase.functions.invoke('listing-ai', { body: { listingId: insertedListing.id } })
+          .then(({ data: aiData, error: aiErr }) => {
+            if (aiErr) {
+              log('فشل الفحص الذكي للإعلان (listing-ai): ' + aiErr.message, true);
+              return;
+            }
+            if (aiData && aiData.error) {
+              log('خطأ من دالة listing-ai: ' + aiData.error, true);
+              return;
+            }
+            if (aiData && aiData.flagged === true) {
+              log('تنبيه ذكاء اصطناعي على الإعلان: ' + (aiData.reason || ''), true);
+            } else {
+              log('تم فحص الإعلان ذكيًا دون ملاحظات');
+            }
+          })
+          .catch(e => log('خطأ أثناء الاتصال بخدمة المراجعة الذكية للإعلان: ' + e.message, true));
+      }
+
       log('تم نشر الإعلان بنجاح (الصور المرفوعة: ' + imageResult.uploadedCount + ', الفاشلة: ' + imageResult.failedCount + ')');
       if (listingImageFiles.length && imageResult.failedCount > 0) {
         showMsg(msgEl, "تم نشر الإعلان بنجاح، لكن تعذر رفع " + imageResult.failedCount + " صورة. الإعلان لم يُلغَ.", 'ok');
@@ -6079,6 +6100,28 @@ button.submit{padding:14px;}
       // رفع الفيديو بالخلفية دون تعليق المستخدم — يُحدَّث المنشور تلقائيًا عند الانتهاء
       if (videoFile && insertedPost && insertedPost.id) {
         uploadPostVideoInBackground(videoFile, insertedPost.id);
+      }
+
+      // مراجعة ذكية إضافية بالخلفية عبر دالة chicken-ai (لا تُعطّل نشر المنشور، تُحدّث حالته لاحقًا عند الحاجة)
+      if (insertedPost && insertedPost.id) {
+        supabase.functions.invoke('chicken-ai', { body: { postId: insertedPost.id, content: content } })
+          .then(({ data: aiData, error: aiErr }) => {
+            if (aiErr) {
+              log('فشل الفحص الذكي للمنشور (chicken-ai): ' + aiErr.message, true);
+              return;
+            }
+            if (aiData && aiData.error) {
+              log('خطأ من دالة chicken-ai: ' + aiData.error, true);
+              return;
+            }
+            if (aiData && aiData.approved === false) {
+              log('تم رفض المنشور بعد المراجعة الذكية: ' + (aiData.reason || ''), true);
+            } else {
+              log('تم تأكيد المنشور عبر المراجعة الذكية (chicken-ai)');
+            }
+            loadPostsFeed();
+          })
+          .catch(e => log('خطأ أثناء الاتصال بخدمة المراجعة الذكية: ' + e.message, true));
       }
 
       document.getElementById('postContent').value = '';
@@ -6651,7 +6694,7 @@ button.submit{padding:14px;}
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('listings')
-        .select('id, category, chicken_type, item_name, unit, quantity, weight_kg, price, wilaya, commune, status, created_at')
+        .select('id, category, chicken_type, item_name, unit, quantity, weight_kg, price, wilaya, commune, status, created_at, ai_flagged, ai_moderation_reason')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -6687,12 +6730,13 @@ button.submit{padding:14px;}
         const imagesForItem = myImagesMap[item.id] || [];
         div.innerHTML = `
           <div class="top-row">
-            <span class="chicken-type">${categoryMeta(item.category).icon} ${escapeHtml(listingTitle(item))} <span class="badge-status ${statusClass}">${statusLabel}</span></span>
+            <span class="chicken-type">${categoryMeta(item.category).icon} ${escapeHtml(listingTitle(item))} <span class="badge-status ${statusClass}">${statusLabel}</span>${item.ai_flagged ? ' <span class="badge-status rejected" title="' + escapeHtml(item.ai_moderation_reason || '') + '">🤖 ملاحظة ذكاء اصطناعي</span>' : ''}</span>
             <span class="price">${listingPriceLabel(item)}</span>
           </div>
           <div class="meta">${isChickenCat ? 'الكمية: ' + (item.quantity || '-') + ' | الوزن التقريبي: ' + (item.weight_kg || '-') + ' كغ' : 'الكمية: ' + (item.quantity || '-') + ' ' + (item.unit || '')}</div>
           <div class="meta">${item.wilaya || ''} - ${item.commune || ''}</div>
           <div class="meta" style="color:#8a8070;">${listingDateLabel(item)}</div>
+          ${item.ai_flagged && item.ai_moderation_reason ? '<div class="meta" style="color:#B3261E;">🤖 ' + escapeHtml(item.ai_moderation_reason) + '</div>' : ''}
           ${(imagesForItem.length) ? '<div class="listing-card-images">' + imagesForItem.map(img => '<img src="' + img.url + '" loading="lazy" onclick="openImageLightbox(this.src)">').join('') + '</div>' : ''}
         `;
 
