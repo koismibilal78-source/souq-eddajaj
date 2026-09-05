@@ -460,24 +460,59 @@
     margin-bottom:12px;
     background:#FDFBF7;
   }
-  /* توحيد حجم الصورة والفيديو داخل المنشور */
+  /* توحيد حجم الصورة والفيديو داخل المنشور (بنفس عرض النص، دون الخروج من حدود البطاقة) */
   .post-media-img,.post-media-video{
     display:block;
-    width:100vw;
-    max-width:100vw;
-    height:70vw;
-    max-height:80vh;
-    position:relative;
-    left:50%;
-    right:50%;
-    margin-left:-50vw;
-    margin-right:-50vw;
+    width:100%;
+    max-width:100%;
+    aspect-ratio:4/3;
+    max-height:60vh;
+    border-radius:10px;
     margin-top:10px;
     margin-bottom:10px;
     object-fit:cover;
     background:#000;
   }
   .post-media-img{cursor:pointer;}
+  /* ===== خلفيات ملوّنة للمنشورات النصية (مثل فيسبوك) ===== */
+  .post-bg-box{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    min-height:160px;
+    border-radius:14px;
+    padding:24px 18px;
+    margin-bottom:8px;
+    color:#fff;
+    font-family:'Cairo',sans-serif;
+    font-weight:700;
+    font-size:calc(19px * var(--fs-scale));
+    line-height:1.6;
+    white-space:pre-wrap;
+    text-shadow:0 1px 3px rgba(0,0,0,.25);
+  }
+  .post-bg-green{background:linear-gradient(135deg,#2f7d46,#0d3b1f);}
+  .post-bg-gold{background:linear-gradient(135deg,#f2b632,#a9660f);}
+  .post-bg-sunset{background:linear-gradient(135deg,#ff7a4d,#c62828);}
+  .post-bg-sky{background:linear-gradient(135deg,#4aa3d8,#1a5b8a);}
+  .post-bg-wheat{background:linear-gradient(135deg,#e8c96b,#8a6a1f);}
+  .post-bg-brown{background:linear-gradient(135deg,#8a5a3b,#4a3320);}
+  /* منتقي لون خلفية المنشور عند النشر */
+  .post-bg-picker{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
+  .post-bg-swatch{
+    width:34px;height:34px;border-radius:50%;
+    cursor:pointer;border:2px solid transparent;
+    display:flex;align-items:center;justify-content:center;
+    font-size:calc(13px * var(--fs-scale));color:#fff;
+  }
+  .post-bg-swatch.selected{border-color:var(--gold,#c9a227);box-shadow:0 0 0 2px rgba(0,0,0,.15);}
+  .post-bg-swatch.none-swatch{
+    background:#fff;border:1.5px dashed var(--border,#c9c2b0);color:#8a8070;font-size:calc(11px * var(--fs-scale));
+  }
+  /* شريط الرموز التعبيرية السريعة */
+  .post-emoji-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .post-emoji-btn{
+    background:#f1efe8;border:1px solid var(--border,#e4ddcf);border-radius:8px;
+    padding:5px 9px;font-size:calc(17px * var(--fs-scale));cursor:pointer;line-height:1;
+  }
   .post-images-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px;}
   .post-gallery-img{width:100%;height:140px;object-fit:cover;border-radius:8px;cursor:pointer;display:block;}
   .lightbox-overlay{
@@ -1437,6 +1472,20 @@ button.submit{padding:14px;}
   <button type="button" class="lightbox-close" id="lightboxCloseBtn">✕</button>
   <img id="lightboxImg" src="" alt="">
 </div>
+<button id="assistantFab" class="assistant-fab" title="مساعد" aria-label="المساعد الذكي">🤖</button>
+<div id="assistantOverlay" class="assistant-overlay">
+  <div class="assistant-panel">
+    <div class="assistant-header">
+      <span>🤖 المساعد الذكي</span>
+      <button type="button" id="assistantCloseBtn" class="assistant-close">✕</button>
+    </div>
+    <div id="assistantMessages" class="assistant-messages"></div>
+    <div class="assistant-input-row">
+      <input type="text" id="assistantInput" placeholder="اكتب سؤالك هنا..." maxlength="400">
+      <button type="button" id="assistantSendBtn" class="assistant-send-btn">إرسال</button>
+    </div>
+  </div>
+</div>
 <div id="profileModalOverlay" class="profile-modal-overlay">
   <div class="profile-modal">
     <button type="button" class="profile-modal-close" id="profileModalCloseBtn" aria-label="إغلاق"></button>
@@ -1974,6 +2023,34 @@ button.submit{padding:14px;}
       <div class="field">
         <label for="postContent">نص المنشور</label>
         <textarea id="postContent" placeholder="اكتب منشورك هنا..."></textarea>
+        <div class="post-emoji-bar" id="postEmojiBar">
+          <button type="button" class="post-emoji-btn">🐔</button>
+          <button type="button" class="post-emoji-btn">🐓</button>
+          <button type="button" class="post-emoji-btn">🐣</button>
+          <button type="button" class="post-emoji-btn">🐤</button>
+          <button type="button" class="post-emoji-btn">🥚</button>
+          <button type="button" class="post-emoji-btn">🦃</button>
+          <button type="button" class="post-emoji-btn">🌾</button>
+          <button type="button" class="post-emoji-btn">🚜</button>
+          <button type="button" class="post-emoji-btn">🏡</button>
+          <button type="button" class="post-emoji-btn">💰</button>
+          <button type="button" class="post-emoji-btn">💵</button>
+          <button type="button" class="post-emoji-btn">📈</button>
+          <button type="button" class="post-emoji-btn">✅</button>
+          <button type="button" class="post-emoji-btn">🔥</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>لون خلفية المنشور (اختياري — يظهر فقط إن لم تُرفق صورة)</label>
+        <div class="post-bg-picker" id="postBgPicker">
+          <div class="post-bg-swatch none-swatch selected" data-bg="">بدون</div>
+          <div class="post-bg-swatch post-bg-green" data-bg="post-bg-green"></div>
+          <div class="post-bg-swatch post-bg-gold" data-bg="post-bg-gold"></div>
+          <div class="post-bg-swatch post-bg-sunset" data-bg="post-bg-sunset"></div>
+          <div class="post-bg-swatch post-bg-sky" data-bg="post-bg-sky"></div>
+          <div class="post-bg-swatch post-bg-wheat" data-bg="post-bg-wheat"></div>
+          <div class="post-bg-swatch post-bg-brown" data-bg="post-bg-brown"></div>
+        </div>
       </div>
       <div class="field">
         <label for="postCategory">نوع المنشور</label>
@@ -2583,7 +2660,7 @@ button.submit{padding:14px;}
 
       const { data: userPosts, error: postsErr } = await supabase
         .from('posts')
-        .select('id, content, image_url, video_url, phone, created_at')
+        .select('id, content, image_url, video_url, phone, created_at, bg_style')
         .eq('user_id', userId)
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
@@ -2605,7 +2682,7 @@ button.submit{padding:14px;}
           const created = p.created_at ? new Date(p.created_at).toLocaleString('ar-DZ') : '';
           return `
             <div class="listing-item">
-              <div class="desc" style="margin-bottom:8px;">${content}</div>
+              ${postContentHtml(p, content)}
               ${p.image_url ? '<img src="' + p.image_url + '" class="post-media-img" loading="lazy" onclick="openImageLightbox(this.src)">' : ''}
               ${p.video_url ? '<video src="' + p.video_url + '" class="post-media-video" controls playsinline preload="none" loading="lazy"></video>' : ''}
               ${p.phone ? '<div class="phone-shown" style="margin-bottom:6px;">' + escapeHtml(p.phone) + '</div>' : ''}
@@ -3190,7 +3267,7 @@ button.submit{padding:14px;}
         <div class="owner-row clickable" data-user-id="${escapeHtml(post.user_id || '')}">${av}<span class="owner-name">${author}</span><span class="meta" style="font-size:calc(12px * var(--fs-scale));margin-right:auto;">${formatPostTime(post.created_at)}</span></div>
         ${loc ? '<div class="meta" style="margin:5px 0 10px;">📍 ' + loc + '</div>' : ''}
         ${distanceHtml}
-        <div class="desc" style="margin-bottom:10px;">${content}</div>
+        ${postContentHtml(post, content)}
         ${renderPostImagesGallery(post)}
         ${post.video_url ? '<video src="' + post.video_url + '" class="post-media-video" controls playsinline preload="metadata"></video>' : ''}
         ${post.phone ? '<div class="phone-shown" style="margin-bottom:8px;">' + escapeHtml(post.phone) + '</div>' : ''}
@@ -3227,7 +3304,7 @@ button.submit{padding:14px;}
     if (!el) return;
     el.innerHTML = '<div class="empty-state">جارٍ تحميل المنشورات...</div>';
     try {
-      const { data, error } = await supabase.from('posts').select('id, user_id, content, category, phone, image_url, image_urls, video_url, status, created_at, latitude, longitude').eq('status','approved').order('created_at',{ascending:false});
+      const { data, error } = await supabase.from('posts').select('id, user_id, content, category, phone, image_url, image_urls, video_url, status, created_at, latitude, longitude, bg_style').eq('status','approved').order('created_at',{ascending:false});
       if (error) throw error;
       const ids = [...new Set((data || []).map(p => p.user_id).filter(Boolean))];
       let nameMap={}, avatarMap={}, wilayaMap={}, communeMap={};
@@ -5708,6 +5785,57 @@ button.submit{padding:14px;}
   const postVideoPreviewVideo = document.getElementById('postVideoPreviewVideo');
 
   let postImageFiles = [];
+  let selectedPostBg = '';
+
+  // إدراج رمز تعبيري في مكان المؤشر داخل نص المنشور
+  (function initPostEmojiBar() {
+    const bar = document.getElementById('postEmojiBar');
+    const textarea = document.getElementById('postContent');
+    if (!bar || !textarea) return;
+    bar.querySelectorAll('.post-emoji-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const emoji = btn.textContent;
+        const start = textarea.selectionStart || textarea.value.length;
+        const end = textarea.selectionEnd || textarea.value.length;
+        textarea.value = textarea.value.slice(0, start) + emoji + textarea.value.slice(end);
+        const newPos = start + emoji.length;
+        textarea.focus();
+        textarea.setSelectionRange(newPos, newPos);
+      });
+    });
+  })();
+
+  // اختيار لون خلفية المنشور
+  (function initPostBgPicker() {
+    const picker = document.getElementById('postBgPicker');
+    if (!picker) return;
+    picker.querySelectorAll('.post-bg-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        picker.querySelectorAll('.post-bg-swatch').forEach(s => s.classList.remove('selected'));
+        sw.classList.add('selected');
+        selectedPostBg = sw.dataset.bg || '';
+      });
+    });
+  })();
+
+  function resetPostBgPicker() {
+    selectedPostBg = '';
+    const picker = document.getElementById('postBgPicker');
+    if (!picker) return;
+    picker.querySelectorAll('.post-bg-swatch').forEach(s => s.classList.remove('selected'));
+    const none = picker.querySelector('.none-swatch');
+    if (none) none.classList.add('selected');
+  }
+
+  // يُرجع HTML لعرض نص المنشور: صندوق ملوّن إن اختار المستخدم لونًا ولا توجد صورة/فيديو، وإلا عرض عادي
+  function postContentHtml(post, contentHtml, extraClass) {
+    const hasMedia = !!(post.image_url || post.video_url || (Array.isArray(post.image_urls) && post.image_urls.length));
+    const cls = extraClass ? (' ' + extraClass) : '';
+    if (post.bg_style && !hasMedia) {
+      return '<div class="post-bg-box ' + escapeHtml(post.bg_style) + cls + '">' + contentHtml + '</div>';
+    }
+    return '<div class="desc' + cls + '" style="margin-bottom:10px;">' + contentHtml + '</div>';
+  }
 
   // ذاكرة تخزين المنشورات المحمّلة، لتفعيل البحث/الفلترة محليًا دون إعادة الجلب من الخادم
   let postsFeedCache = { posts: [], nameMap: {}, avatarMap: {}, wilayaMap: {}, communeMap: {}, myWilaya: '' };
@@ -6167,6 +6295,7 @@ button.submit{padding:14px;}
         image_urls: imageUrls.length ? imageUrls : null,
         video_url: null, // الفيديو (إن وُجد) يُرفع بالخلفية بعد النشر مباشرة، ويُحدَّث لاحقًا
         status: status,
+        bg_style: (imageUrls.length || videoFile) ? null : (selectedPostBg || null),
       };
       if (postLatVal && postLngVal) {
         payload.latitude = parseFloat(postLatVal);
@@ -6216,6 +6345,7 @@ button.submit{padding:14px;}
       }
 
       document.getElementById('postContent').value = '';
+      resetPostBgPicker();
       document.getElementById('postCategory').value = 'عام';
       document.getElementById('postIncludePhone').checked = false;
       document.getElementById('postLat').value = '';
@@ -6246,7 +6376,7 @@ button.submit{padding:14px;}
 
       const { data, error } = await supabase
         .from('posts')
-        .select('id, user_id, content, category, phone, image_url, image_urls, video_url, status, created_at, latitude, longitude')
+        .select('id, user_id, content, category, phone, image_url, image_urls, video_url, status, created_at, latitude, longitude, bg_style')
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
@@ -6359,7 +6489,7 @@ button.submit{padding:14px;}
             <span class="meta" style="font-size:calc(12px * var(--fs-scale));margin-right:auto;">${created}</span>
           </div>
           ${distanceHtml}
-          <div class="desc" style="margin-bottom:10px;">${content}</div>
+          ${postContentHtml(post, content)}
           ${renderPostImagesGallery(post)}
           ${post.video_url ? '<video src="' + post.video_url + '" class="post-media-video" controls playsinline preload="metadata"></video>' : ''}
           ${post.phone ? '<div class="phone-shown" style="margin-bottom:8px;">' + escapeHtml(post.phone) + '</div>' : ''}
@@ -7060,7 +7190,7 @@ button.submit{padding:14px;}
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, video_url, phone, status, created_at, ai_flagged, moderation_reason')
+        .select('id, content, image_url, video_url, phone, status, created_at, ai_flagged, moderation_reason, bg_style')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -7087,7 +7217,7 @@ button.submit{padding:14px;}
             <span class="badge-status ${statusClass}">${statusLabel}</span>${post.ai_flagged ? ' <span class="badge-status rejected" title="' + escapeHtml(post.moderation_reason || '') + '">🤖 ملاحظة ذكاء اصطناعي</span>' : ''}
             <span class="meta" style="font-size:calc(12px * var(--fs-scale));">${created}</span>
           </div>
-          <div class="desc my-post-view-content">${content}</div>
+          ${postContentHtml(post, content, 'my-post-view-content')}
           ${post.ai_flagged && post.moderation_reason ? '<div class="meta" style="color:#B3261E;">🤖 ' + escapeHtml(post.moderation_reason) + '</div>' : ''}
           ${post.image_url ? '<img src="' + post.image_url + '" class="post-media-img" loading="lazy" onclick="openImageLightbox(this.src)">' : ''}
           ${post.video_url ? '<video src="' + post.video_url + '" class="post-media-video" controls playsinline preload="metadata"></video>' : ''}
@@ -7535,19 +7665,5 @@ button.submit{padding:14px;}
   })();
 })();
 </script>
-<button id="assistantFab" class="assistant-fab" title="مساعد" aria-label="المساعد الذكي">🤖</button>
-<div id="assistantOverlay" class="assistant-overlay">
-  <div class="assistant-panel">
-    <div class="assistant-header">
-      <span>🤖 المساعد الذكي</span>
-      <button type="button" id="assistantCloseBtn" class="assistant-close">✕</button>
-    </div>
-    <div id="assistantMessages" class="assistant-messages"></div>
-    <div class="assistant-input-row">
-      <input type="text" id="assistantInput" placeholder="اكتب سؤالك هنا..." maxlength="400">
-      <button type="button" id="assistantSendBtn" class="assistant-send-btn">إرسال</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
