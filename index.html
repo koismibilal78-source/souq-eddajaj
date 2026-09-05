@@ -597,6 +597,99 @@
     justify-content:center;
   }
   .profile-modal-overlay.active{display:flex;}
+  /* ===== المساعد الذكي (زر عائم + نافذة محادثة) ===== */
+  .assistant-fab{
+    position:fixed;
+    bottom:78px;
+    left:14px;
+    width:44px;height:44px;
+    border-radius:50%;
+    background:linear-gradient(135deg,var(--barn-green-2),var(--barn-green));
+    color:var(--gold-light);
+    border:1px solid rgba(201,162,39,.3);
+    font-size:calc(18px * var(--fs-scale));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px -6px rgba(13,26,19,.5);
+    z-index:500;
+    cursor:pointer;
+    opacity:.85;
+  }
+  .assistant-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(20,18,14,.45);
+    z-index:9996;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .assistant-overlay.active{display:flex;}
+  .assistant-panel{
+    width:100%;
+    max-width:480px;
+    height:70vh;
+    background:var(--card, #fff);
+    border-radius:18px 18px 0 0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 -14px 40px rgba(0,0,0,.25);
+  }
+  .assistant-header{
+    background:linear-gradient(135deg,var(--barn-green-2),var(--barn-green));
+    color:var(--gold-light);
+    padding:12px 16px;
+    display:flex;align-items:center;justify-content:space-between;
+    font-family:'Cairo',sans-serif;font-weight:700;
+    font-size:calc(15px * var(--fs-scale));
+  }
+  .assistant-close{
+    background:rgba(255,255,255,.15);border:none;color:#fff;
+    width:30px;height:30px;border-radius:50%;cursor:pointer;
+    font-size:calc(15px * var(--fs-scale));
+  }
+  .assistant-messages{
+    flex:1;overflow-y:auto;padding:12px 14px;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .assistant-msg{
+    max-width:82%;
+    padding:9px 13px;
+    border-radius:14px;
+    font-size:calc(13.5px * var(--fs-scale));
+    line-height:1.6;
+    font-family:'Tajawal',sans-serif;
+    white-space:pre-wrap;
+  }
+  .assistant-msg.user{
+    align-self:flex-end;
+    background:var(--barn-green,#1f6b3d);
+    color:#fff;
+    border-bottom-left-radius:4px;
+  }
+  .assistant-msg.bot{
+    align-self:flex-start;
+    background:#f1efe8;
+    color:var(--ink,#2b2620);
+    border:1px solid var(--border,#e4ddcf);
+    border-bottom-right-radius:4px;
+  }
+  .assistant-msg.typing{opacity:.6;font-style:italic;}
+  .assistant-input-row{
+    display:flex;gap:8px;padding:10px 12px;
+    border-top:1px solid var(--border,#e4ddcf);
+  }
+  .assistant-input-row input{
+    flex:1;padding:10px 14px;border-radius:22px;
+    border:1px solid var(--border,#e4ddcf);
+    font-family:'Tajawal',sans-serif;
+    font-size:calc(13.5px * var(--fs-scale));
+  }
+  .assistant-send-btn{
+    background:var(--barn-green,#1f6b3d);color:#fff;border:none;
+    border-radius:22px;padding:0 18px;
+    font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;
+  }
   .profile-modal{
     background:var(--card);
     width:100%;
@@ -6060,7 +6153,7 @@ button.submit{padding:14px;}
         phone = prof ? prof.phone : null;
       }
 
-      const status = postIsRelatedToBroilers({ content: content }) ? 'approved' : 'rejected';
+      const status = 'approved'; // النشر فوري دائمًا؛ المراجعة الفعلية تتم عبر chicken-ai بعد النشر مباشرة
 
       const postLatVal = document.getElementById('postLat').value;
       const postLngVal = document.getElementById('postLng').value;
@@ -6090,34 +6183,10 @@ button.submit{padding:14px;}
         return;
       }
 
-      if (status === 'approved') {
-        log('تم نشر المنشور مباشرة (مرتبط بمجال الدواجن)');
-        showMsg(msgEl, videoFile ? "تم نشر منشورك بنجاح! الفيديو يُرفع الآن في الخلفية وسيظهر تلقائيًا خلال لحظات." : "تم نشر منشورك بنجاح!", 'ok');
-      } else {
-        log('تم رفض المنشور تلقائيًا: غير مرتبط بمجال الدواجن', true);
-        showMsg(msgEl, "تعذر نشر المنشور: يجب أن يكون المحتوى ضمن مجال سوق الدجاج (بيع/شراء الدجاج، البيض، الفلوس، نشارة الخشب، بيوت بلاستيكية، أو مستلزمات تربية الدجاج).", 'err');
-      }
+      log('تم نشر المنشور مباشرة');
+      showMsg(msgEl, videoFile ? "تم نشر منشورك بنجاح! الفيديو يُرفع الآن في الخلفية وسيظهر تلقائيًا خلال لحظات." : "تم نشر منشورك بنجاح!", 'ok');
 
-      // مراجعة ذكية بالخلفية عبر دالة post-ai (فحص نصي + فحص بصري للصورة الأولى إن وُجدت) — لا تُعطّل نشر المنشور
-      if (insertedPost && insertedPost.id) {
-        supabase.functions.invoke('post-ai', { body: { postId: insertedPost.id } })
-          .then(({ data: aiData, error: aiErr }) => {
-            if (aiErr) {
-              log('فشل الفحص الذكي للمنشور (post-ai): ' + aiErr.message, true);
-              return;
-            }
-            if (aiData && aiData.error) {
-              log('خطأ من دالة post-ai: ' + aiData.error, true);
-              return;
-            }
-            if (aiData && aiData.flagged === true) {
-              log('تنبيه ذكاء اصطناعي على المنشور: ' + (aiData.reason || ''), true);
-            } else {
-              log('تم فحص المنشور ذكيًا دون ملاحظات');
-            }
-          })
-          .catch(e => log('خطأ أثناء الاتصال بخدمة المراجعة الذكية للمنشور: ' + e.message, true));
-      }
+      // ملاحظة: المراجعة الذكية الفعلية للمنشورات تتم عبر دالة chicken-ai أدناه (تحظر فعليًا عند الرفض)
 
       // رفع الفيديو بالخلفية دون تعليق المستخدم — يُحدَّث المنشور تلقائيًا عند الانتهاء
       if (videoFile && insertedPost && insertedPost.id) {
@@ -6380,7 +6449,7 @@ button.submit{padding:14px;}
             }
             saveBtn.disabled = true;
             cancelBtn.disabled = true;
-            const newStatus = postIsRelatedToBroilers({ content: newContent }) ? 'approved' : 'rejected';
+            const newStatus = 'approved'; // النشر فوري دائمًا؛ المراجعة الفعلية تتم عبر chicken-ai
             const { error: updErr } = await supabase
               .from('posts')
               .update({ content: newContent, status: newStatus })
@@ -6396,6 +6465,8 @@ button.submit{padding:14px;}
               return;
             }
             log('تم تعديل المنشور بنجاح');
+            supabase.functions.invoke('chicken-ai', { body: { postId: post.id, content: newContent } })
+              .catch(e => log('خطأ أثناء إعادة المراجعة الذكية بعد التعديل: ' + e.message, true));
             loadPostsFeed();
           });
           deleteBtn.addEventListener('click', async () => {
@@ -7065,7 +7136,7 @@ button.submit{padding:14px;}
           }
           saveBtn.disabled = true;
           cancelBtn.disabled = true;
-          const newStatus = postIsRelatedToBroilers({ content: newContent }) ? 'approved' : 'rejected';
+          const newStatus = 'approved'; // النشر فوري دائمًا؛ المراجعة الفعلية تتم عبر chicken-ai
           const { error: updErr } = await supabase
             .from('posts')
             .update({ content: newContent, status: newStatus })
@@ -7080,12 +7151,9 @@ button.submit{padding:14px;}
             editMsg.textContent = 'تعذر حفظ التعديل: ' + updErr.message;
             return;
           }
-          if (newStatus === 'rejected') {
-            editMsg.style.display = 'block';
-            editMsg.style.color = 'var(--err)';
-            editMsg.textContent = 'تم الحفظ، لكن المحتوى خارج مجال سوق الدجاج فأصبح المنشور مرفوضًا.';
-          }
           log('تم تعديل المنشور بنجاح');
+          supabase.functions.invoke('chicken-ai', { body: { postId: post.id, content: newContent } })
+            .catch(e => log('خطأ أثناء إعادة المراجعة الذكية بعد التعديل: ' + e.message, true));
           loadMyPosts();
         });
         deleteBtn.addEventListener('click', async () => {
@@ -7384,7 +7452,102 @@ button.submit{padding:14px;}
       showMsg(msgEl, "حدث خطأ غير متوقع: " + err.message, 'err');
     }
   });
+  // ===== المساعد الذكي (شات بوت مخفي - زر عائم) =====
+  (function initAssistantChat() {
+    const fab = document.getElementById('assistantFab');
+    const overlay = document.getElementById('assistantOverlay');
+    const closeBtn = document.getElementById('assistantCloseBtn');
+    const messagesEl = document.getElementById('assistantMessages');
+    const input = document.getElementById('assistantInput');
+    const sendBtn = document.getElementById('assistantSendBtn');
+    if (!fab || !overlay) return;
+
+    let chatHistory = []; // [{role:'user'|'model', text}]
+    let sending = false;
+
+    function addMessage(text, role) {
+      const div = document.createElement('div');
+      div.className = 'assistant-msg ' + (role === 'user' ? 'user' : 'bot');
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    function openAssistant() {
+      overlay.classList.add('active');
+      if (!messagesEl.children.length) {
+        addMessage('مرحبًا 👋 أنا المساعد الذكي لسوق الدجاج الوطني. اسألني عن أي شيء يخص استخدام التطبيق: نشر إعلان، البحث، الرسائل، المنشورات، اللايف، أو أي قسم آخر.', 'bot');
+      }
+      setTimeout(() => input && input.focus(), 200);
+    }
+
+    function closeAssistant() {
+      overlay.classList.remove('active');
+    }
+
+    fab.addEventListener('click', openAssistant);
+    closeBtn && closeBtn.addEventListener('click', closeAssistant);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAssistant(); });
+
+    async function sendAssistantMessage() {
+      const text = (input.value || '').trim();
+      if (!text || sending) return;
+      sending = true;
+      sendBtn.disabled = true;
+      input.value = '';
+      addMessage(text, 'user');
+      const typingEl = addMessage('يكتب الآن...', 'bot');
+      typingEl.classList.add('typing');
+
+      try {
+        const { data, error } = await supabase.functions.invoke('assistant-chat', {
+          body: { message: text, history: chatHistory },
+        });
+        typingEl.remove();
+        if (error) {
+          addMessage('تعذّر الاتصال بالمساعد حاليًا. حاول مجددًا بعد قليل.', 'bot');
+          log('فشل استدعاء assistant-chat: ' + error.message, true);
+        } else if (data && data.error) {
+          addMessage('تعذّر الحصول على رد الآن. حاول مجددًا.', 'bot');
+          log('خطأ من دالة assistant-chat: ' + data.error, true);
+        } else {
+          const reply = (data && data.reply) || 'عذرًا، لم أفهم سؤالك.';
+          addMessage(reply, 'bot');
+          chatHistory.push({ role: 'user', text: text });
+          chatHistory.push({ role: 'model', text: reply });
+          if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+        }
+      } catch (e) {
+        typingEl.remove();
+        addMessage('حدث خطأ غير متوقع أثناء الاتصال بالمساعد.', 'bot');
+        log('خطأ غير متوقع في المساعد الذكي: ' + e.message, true);
+      } finally {
+        sending = false;
+        sendBtn.disabled = false;
+      }
+    }
+
+    sendBtn && sendBtn.addEventListener('click', sendAssistantMessage);
+    input && input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendAssistantMessage(); }
+    });
+  })();
 })();
 </script>
+<button id="assistantFab" class="assistant-fab" title="مساعد" aria-label="المساعد الذكي">🤖</button>
+<div id="assistantOverlay" class="assistant-overlay">
+  <div class="assistant-panel">
+    <div class="assistant-header">
+      <span>🤖 المساعد الذكي</span>
+      <button type="button" id="assistantCloseBtn" class="assistant-close">✕</button>
+    </div>
+    <div id="assistantMessages" class="assistant-messages"></div>
+    <div class="assistant-input-row">
+      <input type="text" id="assistantInput" placeholder="اكتب سؤالك هنا..." maxlength="400">
+      <button type="button" id="assistantSendBtn" class="assistant-send-btn">إرسال</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
