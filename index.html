@@ -4221,7 +4221,7 @@ button.submit{padding:14px;}
     try {
       let { data, error } = await supabase
         .from('posts')
-        .select('id, user_id, title, content, category, phone, image_url, video_url, status, created_at')
+        .select('id, user_id, title, content, category, phone, image_url, video_url, status, created_at, ai_flagged, moderation_reason')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -4236,7 +4236,7 @@ button.submit{padding:14px;}
         // إعادة التحميل فقط إذا غيّرت المراجعة التلقائية حالة بعض المنشورات.
         ({ data, error } = await supabase
           .from('posts')
-          .select('id, user_id, title, content, category, phone, image_url, video_url, status, created_at')
+          .select('id, user_id, title, content, category, phone, image_url, video_url, status, created_at, ai_flagged, moderation_reason')
           .order('created_at', { ascending: false }));
         if (error) throw error;
       }
@@ -4269,9 +4269,10 @@ button.submit{padding:14px;}
         div.className = 'admin-row';
         div.dataset.postRowId = post.id;
         div.innerHTML = `
-          <div class="admin-title">${title} <span class="badge-status ${statusClass}">${statusLabel}</span></div>
+          <div class="admin-title">${title} <span class="badge-status ${statusClass}">${statusLabel}</span>${post.ai_flagged ? ' <span class="badge-status rejected" title="' + escapeHtml(post.moderation_reason || '') + '">🤖 ملاحظة ذكاء اصطناعي</span>' : ''}</div>
           <div class="admin-meta">${author} — ${category} — ${created}</div>
           <div class="admin-meta" style="white-space:normal;line-height:1.55;">${content}</div>
+          ${post.ai_flagged && post.moderation_reason ? '<div class="admin-meta" style="color:#B3261E;">🤖 ' + escapeHtml(post.moderation_reason) + '</div>' : ''}
           ${phone ? '<div class="admin-meta">الهاتف: ' + phone + '</div>' : ''}
           ${post.image_url ? '<img src="' + post.image_url + '" style="max-width:100%;border-radius:8px;margin-top:6px;display:block;">' : ''}
           ${post.video_url ? '<video src="' + post.video_url + '" controls style="max-width:100%;border-radius:8px;margin-top:6px;display:block;"></video>' : ''}
@@ -6097,6 +6098,27 @@ button.submit{padding:14px;}
         showMsg(msgEl, "تعذر نشر المنشور: يجب أن يكون المحتوى ضمن مجال سوق الدجاج (بيع/شراء الدجاج، البيض، الفلوس، نشارة الخشب، بيوت بلاستيكية، أو مستلزمات تربية الدجاج).", 'err');
       }
 
+      // مراجعة ذكية بالخلفية عبر دالة post-ai (فحص نصي + فحص بصري للصورة الأولى إن وُجدت) — لا تُعطّل نشر المنشور
+      if (insertedPost && insertedPost.id) {
+        supabase.functions.invoke('post-ai', { body: { postId: insertedPost.id } })
+          .then(({ data: aiData, error: aiErr }) => {
+            if (aiErr) {
+              log('فشل الفحص الذكي للمنشور (post-ai): ' + aiErr.message, true);
+              return;
+            }
+            if (aiData && aiData.error) {
+              log('خطأ من دالة post-ai: ' + aiData.error, true);
+              return;
+            }
+            if (aiData && aiData.flagged === true) {
+              log('تنبيه ذكاء اصطناعي على المنشور: ' + (aiData.reason || ''), true);
+            } else {
+              log('تم فحص المنشور ذكيًا دون ملاحظات');
+            }
+          })
+          .catch(e => log('خطأ أثناء الاتصال بخدمة المراجعة الذكية للمنشور: ' + e.message, true));
+      }
+
       // رفع الفيديو بالخلفية دون تعليق المستخدم — يُحدَّث المنشور تلقائيًا عند الانتهاء
       if (videoFile && insertedPost && insertedPost.id) {
         uploadPostVideoInBackground(videoFile, insertedPost.id);
@@ -6967,7 +6989,7 @@ button.submit{padding:14px;}
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, video_url, phone, status, created_at')
+        .select('id, content, image_url, video_url, phone, status, created_at, ai_flagged, moderation_reason')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -6991,10 +7013,11 @@ button.submit{padding:14px;}
         div.dataset.myPostId = post.id;
         div.innerHTML = `
           <div class="top-row">
-            <span class="badge-status ${statusClass}">${statusLabel}</span>
+            <span class="badge-status ${statusClass}">${statusLabel}</span>${post.ai_flagged ? ' <span class="badge-status rejected" title="' + escapeHtml(post.moderation_reason || '') + '">🤖 ملاحظة ذكاء اصطناعي</span>' : ''}
             <span class="meta" style="font-size:calc(12px * var(--fs-scale));">${created}</span>
           </div>
           <div class="desc my-post-view-content">${content}</div>
+          ${post.ai_flagged && post.moderation_reason ? '<div class="meta" style="color:#B3261E;">🤖 ' + escapeHtml(post.moderation_reason) + '</div>' : ''}
           ${post.image_url ? '<img src="' + post.image_url + '" class="post-media-img" loading="lazy" onclick="openImageLightbox(this.src)">' : ''}
           ${post.video_url ? '<video src="' + post.video_url + '" class="post-media-video" controls playsinline preload="metadata"></video>' : ''}
           <div class="my-post-actions" style="display:flex;gap:8px;margin-top:10px;">
